@@ -19,7 +19,7 @@ st.markdown( """ <style>
 
 def history_page():
     # Set header for page
-    st.title('History')
+    st.title('Prediction History')
 
     data = pd.read_csv('./data/history.csv')
     st.dataframe(data)

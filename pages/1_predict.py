@@ -1,11 +1,6 @@
 import streamlit as st
 import pandas as pd
-import numpy as np
-from io import BytesIO
-import requests
-from sklearn.base import BaseEstimator, TransformerMixin
 import joblib
-import imblearn
 import os
 
 # Configure the page
@@ -25,98 +20,43 @@ st.markdown( """ <style>
 )
 
 # ------ Set header for page
-st.title('Term Deposit Subscriber Prediction')
+st.title('Subscriber Prediction Page')
 
 column1, column2 = st.columns([.6, .4])
 with column1:
-    model_option = st.selectbox('Choose which model to use for prediction', options=['Gradient Boosting', 'Support Vector'])
+    model_option = st.selectbox('Choose which model to use for prediction', options=['RandomForest Model'])
 
 
-# Load trained machine learning model and encoder from GitHub
-github_model1_url = 'https://raw.githubusercontent.com/pk-aduyaw/Customer_Churn_Classification_Project/master/model/GradientBoosting.joblib'
-github_model2_url = 'https://raw.githubusercontent.com/pk-aduyaw/Customer_Churn_Classification_Project/master/model/SupportVector.joblib'
-encoder_url = 'https://raw.githubusercontent.com/pk-aduyaw/Customer_Churn_Classification_Project/master/model/label_encoder.joblib'
+# Define the local file paths
+model_path = './model/RandomForest_model.joblib'
+local_encoder_path = './model/label_encoder.joblib'
 
-
-# -------- Function to load the model from GitHub
+# -------- Function to load the model from local files
 @st.cache_resource(show_spinner="Loading model")
-def gb_pipeline():
-    response = requests.get(github_model1_url)
-    model_bytes = BytesIO(response.content)
-    pipeline = joblib.load(model_bytes)
+def rf_pipeline():
+    # Load the RandomForest model from the local path
+    with open(model_path, 'rb') as f:
+        pipeline = joblib.load(f)
     return pipeline
 
 
-@st.cache_resource(show_spinner="Loading model")
-def sv_pipeline():
-    response = requests.get(github_model2_url)
-    model_bytes = BytesIO(response.content)
-    pipeline = joblib.load(model_bytes)
-    return pipeline
-
-
-# --------- Function to load encoder from GitHub
+# --------- Function to load encoder from local files
 def load_encoder():
-    response = requests.get(encoder_url)
-    encoder_bytes = BytesIO(response.content)
-    encoder = joblib.load(encoder_bytes)
-    return encoder
+    # Load label encoder
+    with open(local_encoder_path, 'rb') as b:
+        label_encoder = joblib.load(b)
+    return label_encoder
 
 
 # --------- Create a function for model selection
 def select_model():
     # ------- Option for first model
-    if model_option == 'Gradient Boosting':
-        model = gb_pipeline()
-    # ------- Option for second model
-    if model_option == 'Support Vector':
-        model = sv_pipeline()
+    if model_option == 'RandomForest Model':
+        model = rf_pipeline()
     encoder = load_encoder()
     return model, encoder
 
 
-# Custom function to deal with cleaning the total charges column
-class TotalCharges_cleaner(BaseEstimator, TransformerMixin):
-    def fit(self, X, y=None):
-        return self
-        
-    def transform(self, X):
-        # Replace empty string with NA
-        X['TotalCharges'].replace(' ', np.nan, inplace=True)
-
-        # Convert the values in the Totalcharges column to a float
-        X['TotalCharges'] = X['TotalCharges'].transform(lambda x: float(x))
-        return X
-        
-    # Serialization methods
-    def __getstate__(self):
-        # Return state to be serialized
-        return {}
-
-    def __setstate__(self, state):
-        # Restore state from serialized data
-        pass
-        
-    # Since this transformer doesn't remove or alter features, return the input features
-    def get_feature_names_out(self, input_features=None):
-        return input_features
-
-
-# Create a class to deal with dropping Customer ID from the dataset
-class columnDropper(BaseEstimator, TransformerMixin):
-    def fit(self, X, y=None):
-        return self
-        
-    def transform(self, X):
-        # Drop the specified column
-        return X.drop('customerID', axis=1)
-        
-    def get_feature_names_out(self, input_features=None):
-        # If input_features is None or not provided, return None
-        if input_features is None:
-            return None
-        # Return feature names after dropping the specified column
-        return [feature for feature in input_features if feature != 'customerID']
 
 # ---- Initialize prediction in session state
 if 'prediction' not in st.session_state:
@@ -127,36 +67,31 @@ if 'prediction_proba' not in st.session_state:
 # ------- Create a function to make prediction
 def make_prediction(model, encoder):
 
-    customerID = st.session_state['customer_id']
-    gender = st.session_state['gender']
-    SeniorCitizen = st.session_state['senior_citizen']
-    Partner = st.session_state['partners']
-    Dependents = st.session_state['dependents']
-    tenure = st.session_state['tenure']
-    PhoneService = st.session_state['phone_service']
-    MultipleLines = st.session_state['multiple_lines']
-    InternetService = st.session_state['internet_service']
-    OnlineSecurity = st.session_state['online_security']
-    OnlineBackup = st.session_state['online_backup']
-    DeviceProtection = st.session_state['device_protection']
-    TechSupport = st.session_state['tech_support']
-    StreamingTV = st.session_state['streaming_tv']
-    StreamingMovies = st.session_state['streaming_movies']
-    Contract = st.session_state['contract']
-    PaperlessBilling = st.session_state['paperless_billing']
-    PaymentMethod = st.session_state['payment_method']
-    MonthlyCharges = st.session_state['monthly_charges']
-    TotalCharges = st.session_state['total_charges']
+    age = st.session_state['age']
+    job = st.session_state['job']
+    marital = st.session_state['marital']
+    education = st.session_state['education']
+    default = st.session_state['default']
+    balance = st.session_state['balance']
+    housing = st.session_state['housing']
+    loan = st.session_state['loan']
+    contact = st.session_state['contact']
+    day = st.session_state['day']
+    month = st.session_state['month']
+    duration = st.session_state['duration']
+    campaign = st.session_state['campaign']
+    pdays = st.session_state['pdays']
+    previous = st.session_state['previous']
+    poutcome = st.session_state['poutcome']
+    
         
-    columns = ['customerID', 'gender', 'SeniorCitizen', 'Partner', 'Dependents', 'tenure',
-                'PhoneService', 'MultipleLines', 'InternetService', 'OnlineSecurity', 'OnlineBackup',
-                'DeviceProtection', 'TechSupport', 'StreamingTV', 'StreamingMovies',
-                'Contract', 'PaperlessBilling', 'PaymentMethod', 'MonthlyCharges', 'TotalCharges']
+    columns = ['age', 'job', 'marital', 'education', 'default', 'balance', 'housing',
+       'loan', 'contact', 'day', 'month', 'duration', 'campaign', 'pdays',
+       'previous', 'poutcome']
         
-    values = [[customerID, gender, SeniorCitizen, Partner, Dependents, tenure, PhoneService,
-            MultipleLines, InternetService, OnlineSecurity, OnlineBackup, DeviceProtection,
-            TechSupport, StreamingTV, StreamingMovies, Contract, PaperlessBilling,
-            PaymentMethod, MonthlyCharges, TotalCharges]]
+    values = [[age, job, marital, education, default, balance, housing,
+            loan, contact, day, month, duration,
+            campaign, pdays, previous, poutcome]]
         
     data = pd.DataFrame(values, columns=columns)
 
@@ -169,8 +104,7 @@ def make_prediction(model, encoder):
     prediction_proba = model.predict_proba(data)
     st.session_state['prediction_proba'] = prediction_proba
 
-    data['Churn'] = prediction
-    data['Model'] = model_option
+    data['y'] = prediction
 
     data.to_csv('./data/history.csv', mode='a', header=not os.path.exists('./data/history.csv'), index=False)
 
@@ -186,37 +120,34 @@ def input_features():
 
         # ------ Collect customer information
         with col1:
-            st.subheader('Demographics')
-            st.text_input('Customer ID', value="", placeholder='eg. 1234-ABCDE', key='customer_id')
-            st.radio('Gender', options=['Male', 'Female'],horizontal=True, key='gender',)
-            st.radio('Partners', options=['Yes', 'No'],horizontal=True, key='partners')
-            st.radio('Dependents', options=['Yes', 'No'],horizontal=True, key='dependents')
-            st.radio("Senior Citizen ('Yes-1, No-0')", options=[1, 0],horizontal=True, key='senior_citizen')
+            st.subheader('Bank Client Data')
+            st.number_input('age', min_value=18, key='age')
+            st.selectbox('job', options=['management', 'technician', 'entrepreneur', 'blue-collar',
+            'unknown', 'retired', 'admin.', 'services', 'self-employed',
+            'unemployed', 'housemaid', 'student'], key='job')
+            st.selectbox('marital', options=['married', 'divorced','single'], key='marital')
+            st.selectbox('education', options=['tertiary', 'secondary', 'unknown', 'primary'], key='education')
+            st.radio('default', options=['yes', 'no'],horizontal=True, key='default')
+            st.number_input("balance", placeholder="amount in euros", key='balance')
+            st.radio('housing', options=['yes', 'no'],horizontal=True, key='housing')
+            st.radio('loan', options=['yes', 'no'],horizontal=True, key='loan')
             
-        # ------ Collect customer account information
-        with col1:
-            st.subheader('Customer Account Info.')
-            st.number_input('Tenure', min_value=0, max_value=70, key='tenure')
-            st.selectbox('Contract', options=['Month-to-month', 'One year', 'Two year'], key='contract')
-            st.selectbox('Payment Method',
-                                        options=['Electronic check', 'Mailed check', 'Bank transfer (automatic)', 'Credit card (automatic)'],
-                                        key='payment_method')
-            st.radio('Paperless Billing', ['Yes', 'No'], horizontal=True, key='paperless_billing')
-            st.number_input('Monthly Charges', placeholder='Enter amount...', key='monthly_charges')
-            st.number_input('Total Charges', placeholder='Enter amount...', key='total_charges')
-            
-        # ------ Collect customer subscription information
+        # ------ Collect Last Contact for Current Campaign
         with col2:
-            st.subheader('Subscriptions')
-            st.radio('Phone Service', ['Yes', 'No'], horizontal=True, key='phone_service')
-            st.selectbox('Multiple Lines', ['Yes', 'No', 'No internet servie'], key='multiple_lines')
-            st.selectbox('Internet Service', ['DSL','Fiber optic', 'No'], key='internet_service')
-            st.selectbox('Online Security', ['Yes', 'No', 'No internet servie'], key='online_security')
-            st.selectbox('Online Backup', ['Yes', 'No', 'No internet servie'], key='online_backup')
-            st.selectbox('Device Protection', ['Yes', 'No', 'No internet servie'], key='device_protection')
-            st.selectbox('Tech Support', ['Yes', 'No', 'No internet servie'], key='tech_support')
-            st.selectbox('Streaming TV', ['Yes', 'No', 'No internet servie'], key='streaming_tv')
-            st.selectbox('Streaming Movies', ['Yes', 'No', 'No internet servie'], key='streaming_movies')
+            st.subheader('Last Current Campaign Contact')
+            st.selectbox('contact', options=['unknown', 'cellular', 'telephone'], key='contact')
+            st.select_slider('day', options=(1, 31), key='day')
+            st.selectbox('month', options=['may', 'jun', 'jul', 'aug', 'oct', 'nov', 'dec', 'jan', 'feb',
+       'mar', 'apr', 'sep'], key='month')
+            st.number_input("duration", placeholder="time in seconds", key='duration')
+            
+        # ------ Collect Other Relevant Details
+        with col2:
+            st.subheader('Other Details')
+            st.number_input('campaign', min_value=1, key='campaign')
+            st.number_input('pdays', min_value=-1, key='pdays')
+            st.number_input('previous', min_value=0, key='previous')
+            st.selectbox('poutcome', options=['unknown', 'failure', 'other', 'success'], key='poutcome')
             
         st.form_submit_button('Predict', on_click=make_prediction, kwargs=dict(model=model_pipeline, encoder=encoder))
 
@@ -239,14 +170,14 @@ if __name__=='__main__':
         if prediction == "Yes":
             cols = st.columns([.1,.8,.1])
             with cols[1]:
-                st.markdown(f'### The customer will churn with a {round(probability[0][1],2)}% probability.')
+                st.markdown(f'### The customer will subscribe to a term deposit with a {round(probability[0][1],2)}% probability.')
             cols = st.columns([.3,.4,.3])
             with cols[1]:
-                st.success('Churn status predicted successfullly🎉')
+                st.success('Subscription status predicted successfullly🎉')
         else:
             cols = st.columns([.1,.8,.1])
             with cols[1]:
-                st.markdown(f'### The customer will not churn with a {round(probability[0][0],2)}% probability.')
+                st.markdown(f'### The customer will not subscribe too a term deposit with a {round(probability[0][0],2)}% probability.')
             cols = st.columns([.3,.4,.3])
             with cols[1]:
-                st.success('Churn status predicted successfullly🎉')
+                st.success('Subscription status predicted successfullly🎉')
