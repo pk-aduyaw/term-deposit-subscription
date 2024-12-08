@@ -177,7 +177,7 @@ if __name__=='__main__':
         else:
             cols = st.columns([.1,.8,.1])
             with cols[1]:
-                st.markdown(f'### The customer will not subscribe too a term deposit with a {round(probability[0][0],2)}% probability.')
+                st.markdown(f'### The customer will not subscribe to a term deposit with a {round(probability[0][0],2)}% probability.')
             cols = st.columns([.3,.4,.3])
             with cols[1]:
                 st.success('Subscription status predicted successfullly🎉')
